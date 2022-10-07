@@ -1,0 +1,20 @@
+{
+  "name": "upcoming-releases",
+  "version": "1.0.0",
+  "description": "A simple Node.js command-line application that makes requests to the Google Sheets API - from https://github.com/googleworkspace/node-samples/blob/master/sheets/quickstart",
+  "private": true,
+  "dependencies": {
+    "googleapis": "^39.0.0",
+    "chai": "^4.3.6"
+  },
+  "devDependencies": {
+    "eslint": "^8.8.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.4"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "/Users/alan.gordon1/.nvm/versions/node/v17.4.0/bin/node ./update-upcoming-installs.js"
+  },
+  "license": "Apache-2.0"
+}

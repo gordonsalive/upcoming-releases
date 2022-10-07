@@ -1,0 +1,56 @@
+# temp files and credentials!
+token.json
+credentials.json
+
+# identifiers and useage specific values
+sheets-config.js
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Logs
+logs
+*.log
+
+# Node Dependency directory
+node_modules
+
+# output directory
+dev/
+
+# Java ignores...
+# intellij ignore...
+.idea/
+.idea_modules/
+*.iws
+*.iml
+
+# maven ignore...
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Avoid ignoring Maven wrapper jar file (.jar files are usually ignored)
+!/.mvn/wrapper/maven-wrapper.jar
+
+#Java ignore...
+# Compiled class file
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+package-lock.json
