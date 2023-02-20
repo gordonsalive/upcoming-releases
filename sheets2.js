@@ -3,27 +3,20 @@
  * Based on exampled copied from https://github.com/googleworkspace/node-samples/blob/master/sheets/quickstart
  *   so applying the same licence.
  */
- import { readFile, writeFile } from 'fs/promises';
- // eslint-disable-next-line import/no-unresolved
- import { createInterface } from 'node:readline/promises';
- import { google } from 'googleapis';
 
- import { express } from 'express';
- import { opn } from 'open';
+/*
+ * This is the verison that uses an updated version of authentication.
+ */
 
- const path = require('path');
- const fs = require('fs');
+import { google } from 'googleapis';
+import opn from 'open';
+import express from 'express';
+import fs from 'fs';
 
-// If modifying these scopes, delete token.json.
 const READONLY_SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 const WRITE_SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first
-// time.
-const READONLY_TOKEN_PATH = 'readonly-token.json';
-const WRITE_TOKEN_PATH = 'write-token.json';
 
-const keyfile = path.join(__dirname, 'credentials.json');
+const keyfile = 'credentials.json';
 const keys = JSON.parse(fs.readFileSync(keyfile));
 
 // Create an oAuth2 client to authorize the API call
@@ -33,82 +26,98 @@ const client = new google.auth.OAuth2(
     keys.web.redirect_uris[0]
 );
 
-// a function that takes in a scope like READONLY_TOKEN_PATH and sets authorization
-// TODO: do this in a functoin or hold separate scopes?
-const authorizeUrlForScope = (scopes) => {
-    // Generate the url that will be used for authorization
-    this.authorizeUrl = client.generateAuthUrl({
-        access_type: 'offline',
-        scope: scopes,
-    });
-};
-
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- * Returns a Promise.
- */
-function getNewToken(oAuth2Client, callback, scopes, tokenPath) {
-    const authUrl = oAuth2Client.generateAuthUrl({
+const authorizationUrls = (() => {
+    // a function that takes in a scope like READONLY_TOKEN_PATH and returns authorization URL
+    const authorizeUrlForScope = (scopes) => client.generateAuthUrl({
         access_type: 'offline',
         scope: scopes,
     });
 
-    console.log('Authorize this app by visiting this url:', authUrl);
+    return {
+        readonly: authorizeUrlForScope(READONLY_SCOPES),
+        write: authorizeUrlForScope(WRITE_SCOPES)
+    };
+})();
 
-    const rl = createInterface({
-        input: process.stdin,
-        output: process.stdout,
+// Code that proves that a promise being rejected acts as an exception and drops to catch in an async function
+// const reject1 = () => Promise.reject('reject 1');
+// const reject2 = () => Promise.reject('reject 2');
+// const awaitTwice = async () => {
+//     console.log('in awaitTwice');
+//     try {
+//         console.log('before reject 1');
+//         await reject1();
+//         // await reject1().catch((e) => { throw e; });
+//         console.log('after reject 1');
+//         await reject2();
+//         // await reject2().catch((e) => { throw e; });
+//         console.log('after reject 2');
+//     } catch (e) {
+//         console.log(' it was caught now - ', e);
+//     }
+// };
+// awaitTwice();
+
+async function authoriseAndCallCallback(callback, authorizationUrl) {
+    const openExpressServerPromise = () => new Promise((resolve) => {
+        // Open an http server to accept the oauth callback. In this case, the only request to our webserver is to /oauth2callback?code=<code>
+        // create express app
+        const app = express();
+        // creating server to listen on port 3000 with event to start whole process
+        const server = app.listen(3000, () => {
+            // open the browser to the authorize url to start the workflow
+            opn(authorizationUrl, { wait: false });
+        });
+        resolve({ app, server });
     });
 
-    return rl.question('Enter the code from that page here: ')
-        .then((code) => {
-            rl.close();
+    const listenForAuthAndSetGoogleClientCredentialsPromise = (app) => new Promise((resolve, reject) => {
+        const handleGetTokenErr = (err) => {
+            // eslint-disable-next-line no-console
+            console.error('Error getting oAuth tokens:', err);
+            throw err;
+        };
 
-            return new Promise((resolve, reject) => {
-                oAuth2Client.getToken(code, (err, token) => ((err) ? reject(err) : resolve(token)));
-            });
-        })
-        .catch((err) => {
-            console.error('Error while trying to retrieve access token', err);
-        })
-        .then((token) => {
-            oAuth2Client.setCredentials(token);
-            // Store the token to disk for later program executions
-            return writeFile(tokenPath, JSON.stringify(token))
-                .catch((err) => {
-                    console.error(err);
-                })
-                .then(() => {
-                    console.log('Token stored to', tokenPath);
-                    return callback(oAuth2Client);
-                });
-        });
-}
+        const handleGetTokenSuccess = (tokens, res) => {
+            client.credentials = tokens;
+            res.send('Authentication successful! Please return to the console.');
+        };
 
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback, scopes, tokenPath) {
-    const { client_secret, client_id, redirect_uris } = credentials.installed;
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+        try {
+            // set express to immediately start listening for auth callback supplying the code we need to use
+            app.get(
+                '/oauth2callback',
+                // when request is made to us, extract code from qry params and call google api client.getToken
+                (req, res) => client.getToken(
+                    req.query.code,
+                    //  getTokens asynchronously responds with error or token which we will add to our client
+                    (err, tokens) => ((err) ? handleGetTokenErr(err) : resolve(handleGetTokenSuccess(tokens, res)))
+                )
+            );
+        } catch (e) {
+            reject(e);
+        }
+    });
 
-    console.log('authorise');
-    // Check if we have previously stored a token.
-    return readFile(tokenPath)
-        .then((token) => {
-            oAuth2Client.setCredentials(JSON.parse(token));
-            return callback(oAuth2Client);
-        })
-        .catch((err) => {
-            console.error(`no existing credentials:${err}`);
-            return getNewToken(oAuth2Client, callback, scopes, tokenPath);
-        });
+    // TODO: I should add timeout handling
+    const { app, server } = await openExpressServerPromise();
+    try {
+        await listenForAuthAndSetGoogleClientCredentialsPromise(app);
+        return await callback(client);
+    } finally {
+        server.close();
+    }
+
+    // this is the same code as Promise.then().finally();
+    // return openExpressServerPromise()
+    //     .then(({ app, server }) => listenForAuthAndSetGoogleClientCredentialsPromise(app)
+    //         .then(() => {
+    //             callback(client);
+    //         })
+    //         .finally(() => {
+    //             console.log('closing express server');
+    //             server.close();
+    //         }));
 }
 
 // Function to fetch google sheets data as a promise, pass in the params, e.g.:
@@ -119,32 +128,54 @@ function authorize(credentials, callback, scopes, tokenPath) {
 function getSheetsData(sheetsParams) {
     // embed the params into a callback function that will receive auth from authorize
     // and call sheets api to fetch data and return it in a promise
-    const callback = (auth) => {
-        console.log('in callback');
+    const callback = async (auth) => {
         const sheets = google.sheets({ version: 'v4', auth });
 
-        return new Promise((resolve, reject) => {
+        const getSheetValuesPromise = () => new Promise((resolve, reject) => {
             sheets.spreadsheets.values.get(
                 sheetsParams,
                 (err, res) => ((err) ? reject(err) : resolve(res.data.values))
             );
-        })
-            .then((rows) => {
-                if (rows.length > 1) {
-                    const [colHeadings, dataRows] = [rows[0], rows.slice(1)];
-                    console.log(`colHeadings: ${colHeadings}\ndataRows count: ${dataRows.length}`);
-                    return { colHeadings, dataRows };
-                }
-                console.log('No data found.');
-                return { colHeadings: [], dataRows: [] };
-            })
-            .catch((err) => console.error(`The API returned an error: ${err}`));
+        });
+
+        try {
+            const rows = await getSheetValuesPromise();
+            if (rows.length > 1) {
+                const [colHeadings, dataRows] = [rows[0], rows.slice(1)];
+                // eslint-disable-next-line no-console
+                console.log(`colHeadings: ${colHeadings}\ndataRows count: ${dataRows.length}`);
+                return { colHeadings, dataRows };
+            }
+            // eslint-disable-next-line no-console
+            console.log('No data found.');
+            return { colHeadings: [], dataRows: [] };
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error(`The API returned an error: ${e}`);
+            return e;
+        }
+
+        // same code as Promise.then().catch()
+        // return new Promise((resolve, reject) => {
+        //     console.log('about to call sheets.spreadsheets.values.get');
+        //     sheets.spreadsheets.values.get(
+        //         sheetsParams,
+        //         (err, res) => ((err) ? reject(err) : resolve(res.data.values))
+        //     );
+        // })
+        //     .then((rows) => {
+        //         if (rows.length > 1) {
+        //             const [colHeadings, dataRows] = [rows[0], rows.slice(1)];
+        //             console.log(`colHeadings: ${colHeadings}\ndataRows count: ${dataRows.length}`);
+        //             return { colHeadings, dataRows };
+        //         }
+        //         console.log('No data found.');
+        //         return { colHeadings: [], dataRows: [] };
+        //     })
+        //     .catch((err) => console.error(`The API returned an error: ${err}`));
     };
 
-    return readFile('credentials.json')
-        // Authorize a client with credentials, then call the Google Sheets API.
-        //! ! callback just takes an auth token, so I need to curry it first...
-        .then((content) => authorize(JSON.parse(content), callback, READONLY_SCOPES, READONLY_TOKEN_PATH));
+    return authoriseAndCallCallback(callback, authorizationUrls.readonly);
 }
 
 // Function to update google sheets data as a promise, pass in the params, e.g.:
@@ -155,17 +186,16 @@ function getSheetsData(sheetsParams) {
 //     valueInputOption: "USER_ENTERED",
 //     resource: { range: "Sheet1!A1", majorDimension: "ROWS", values: [["b"]] },
 //   }
-//
+
 // Can play with options in the google docs here:
 // https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/update
 function setSheetsData(sheetsParams) {
     // embed the params into a callback function that will receive auth from authorize
     // and call sheets api to fetch data and return it in a promise
-    const callback = (auth) => {
-        console.log('in callback');
+    const callback = async (auth) => {
         const sheets = google.sheets({ version: 'v4', auth });
 
-        return new Promise((resolve, reject) => {
+        const updateSheetValuesPromise = () => new Promise((resolve, reject) => {
             sheets.spreadsheets.values.update(
                 {
                     auth,
@@ -173,15 +203,32 @@ function setSheetsData(sheetsParams) {
                 },
                 (err, resp) => ((err) ? reject(err) : resolve(resp))
             );
-        })
-            .then((resp) => resp.data.updatedRows) // console.log(resp); // a very rich response with lots of useful info
-            .catch((err) => console.error(`The API returned an error: ${err}`));
+        });
+
+        try {
+            const resp = await updateSheetValuesPromise();
+            return resp.data.updatedRows;
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error(`The API returned an error: ${e}`);
+            return e;
+        }
+
+        // same code as Promise.then().catch()
+        // return new Promise((resolve, reject) => {
+        //     sheets.spreadsheets.values.update(
+        //         {
+        //             auth,
+        //             ...sheetsParams
+        //         },
+        //         (err, resp) => ((err) ? reject(err) : resolve(resp))
+        //     );
+        // })
+        //     .then((resp) => resp.data.updatedRows) // console.log(resp); // a very rich response with lots of useful info
+        //     .catch((err) => console.error(`The API returned an error: ${err}`));
     };
 
-    return readFile('credentials.json')
-        // Authorize a client with credentials, then call the Google Sheets API.
-        //! ! callback just takes an auth token, so I need to curry it first...
-        .then((content) => authorize(JSON.parse(content), callback, WRITE_SCOPES, WRITE_TOKEN_PATH));
+    return authoriseAndCallCallback(callback, authorizationUrls.write);
 }
 
 export { getSheetsData, setSheetsData };

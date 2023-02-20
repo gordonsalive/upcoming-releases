@@ -6,6 +6,7 @@
   "dependencies": {
     "googleapis": "^108.0.0",
     "express": "^4.17.1",
+    "server-destroy": "^1.0.1",
     "open": "^8.0.0",
     "chai": "^4.3.6"
   },

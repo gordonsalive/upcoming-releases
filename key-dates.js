@@ -4,7 +4,8 @@
  */
 
 // TODO: simplify this by using a data filter in the sheets params to only fetch 'upcoming' dates.
-import * as sheetsJs from './sheets.js';
+// import * as sheetsJs from './sheets.js';
+import * as sheetsJs from './sheets3.js';
 import sheetsConfig from './sheets-config.js';
 
 const UPCOMING_DEPS_ONLY = true;
@@ -23,13 +24,10 @@ const milestones = [
     'End - ASRS, FUL, WMS',
 ];// details for AWS Env item is 'Handover from Cloud Services to HR/RR'
 
-console.log('sheetsConfig.keyDatesSpreadsheet', sheetsConfig.keyDatesSpreadsheet);
+console.log('Key Dates sheetsConfig.keyDatesSpreadsheet', sheetsConfig.keyDatesSpreadsheet);
 
-const getKeyDates = () => sheetsJs.getSheetsData({
-    spreadsheetId: sheetsConfig.keyDatesSpreadsheet,
-    range: 'Key Dates - Sorted!A:K',
-})
-    .then((keyDates) => {
+const getKeyDatesPromise = async () => {
+    const filterKeyDatesByMilestoneType = (keyDates) => {
         const { colHeadings } = keyDates;
         const milestoneTypeIndex = colHeadings.indexOf('Milestone Type');
         console.log(`Filtering by milestone type - col index: ${milestoneTypeIndex}`);
@@ -37,12 +35,10 @@ const getKeyDates = () => sheetsJs.getSheetsData({
             (row) => milestoneTypes.includes(row[milestoneTypeIndex])
         );
 
-        return {
-            filteredByMilestoneType,
-            colHeadings,
-        };
-    })
-    .then(({ filteredByMilestoneType, colHeadings }) => {
+        return { filteredByMilestoneType, colHeadings, };
+    };
+
+    const filterByInterestedGroups = ({ filteredByMilestoneType, colHeadings }) => {
         const interestedGroupsIndex = colHeadings.indexOf('Interested Group');
         console.log(`Filtering by interested groups - col index: ${interestedGroupsIndex}, dataRows count: ${filteredByMilestoneType.length}`);
         // in this case I don't want to do an exact match.
@@ -61,8 +57,9 @@ const getKeyDates = () => sheetsJs.getSheetsData({
             filteredByInterestedGroups,
             colHeadings,
         };
-    })
-    .then(({ filteredByInterestedGroups, colHeadings }) => {
+    };
+
+    const filterByMilestone = ({ filteredByInterestedGroups, colHeadings }) => {
         const milestoneIndex = colHeadings.indexOf('Milestone');
         console.log(`Filtering by milestone - col index: ${milestoneIndex}, dataRows count: ${filteredByInterestedGroups.length}`);
         const filteredByMilestone = filteredByInterestedGroups.filter(
@@ -73,8 +70,9 @@ const getKeyDates = () => sheetsJs.getSheetsData({
             filteredByMilestone,
             colHeadings,
         };
-    })
-    .then(({ filteredByMilestone, colHeadings }) => {
+    };
+
+    const filterByUpcoming = ({ filteredByMilestone, colHeadings }) => {
         const dateIndex = colHeadings.indexOf('Date');
         console.log(`Filtering by upcoming only - col index: ${dateIndex}, dataRows count: ${filteredByMilestone.length}`);
 
@@ -104,8 +102,9 @@ const getKeyDates = () => sheetsJs.getSheetsData({
             upcomingDeployments,
             colHeadings,
         };
-    })
-    .then(({ upcomingDeployments, colHeadings }) => {
+    };
+
+    const groupedByCFC = ({ upcomingDeployments, colHeadings }) => {
         console.log(`Final results count: ${upcomingDeployments.length}`);
         // now group up the records by site name and sort group records by date
         // and groups by date of first item in each group
@@ -127,8 +126,9 @@ const getKeyDates = () => sheetsJs.getSheetsData({
             grouped,
             colHeadings,
         };
-    })
-    .then(({ grouped, colHeadings }) => {
+    };
+
+    const keyDatesGroupedAndTrimmed = ({ grouped, colHeadings }) => {
         const dateIndex = colHeadings.indexOf('Date');
         const detailsIndex = colHeadings.indexOf('Details');
         const milestoneIndex = colHeadings.indexOf('Milestone');
@@ -145,17 +145,31 @@ const getKeyDates = () => sheetsJs.getSheetsData({
         }, {});
 
         return groupedAndTrimmed;
-    })
-    .catch((err) => {
-        console.error('Error loading client secret file:', err);
-    });
+    };
 
-const setKeyDates = (sheetsParams) => sheetsJs.setSheetsData(sheetsParams)
-    .then((resp) => {
-        console.log(`set key dates, resp: ${resp}`);
-    })
-    .catch((err) => {
-        console.error(`failed to update sheets: ${err}`);
-    });
+    try {
+        const keyDates = await sheetsJs.getSheetsDataPromise({
+            spreadsheetId: sheetsConfig.keyDatesSpreadsheet,
+            range: 'Key Dates - Sorted!A:K',
+        });
 
-export { getKeyDates, setKeyDates };
+        const keyDatesFilteredByMilestoneType = filterKeyDatesByMilestoneType(keyDates);
+        const keyDatesFilteredByInterestedGroups = filterByInterestedGroups(keyDatesFilteredByMilestoneType);
+        const keyDatesFilteredByMilestone = filterByMilestone(keyDatesFilteredByInterestedGroups);
+        const keyDatesFilteredByUpcoming = filterByUpcoming(keyDatesFilteredByMilestone);
+        const keyDatesGroupedByCFC = groupedByCFC(keyDatesFilteredByUpcoming);
+        return keyDatesGroupedAndTrimmed(keyDatesGroupedByCFC);
+    } catch (e) {
+        console.error('Error:', e);
+    }
+};
+
+// const setKeyDates = (sheetsParams) => sheetsJs.setSheetsData(sheetsParams)
+//     .then((resp) => {
+//         console.log(`set key dates, resp: ${resp}`);
+//     })
+//     .catch((err) => {
+//         console.error(`failed to update sheets: ${err}`);
+//     });
+
+export default getKeyDatesPromise;

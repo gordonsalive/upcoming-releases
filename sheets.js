@@ -3,6 +3,11 @@
  * Based on exampled copied from https://github.com/googleworkspace/node-samples/blob/master/sheets/quickstart
  *   so applying the same licence.
  */
+
+/*
+ * This version uses a depricated method of authentication.
+ */
+
 import { readFile, writeFile } from 'fs/promises';
 // eslint-disable-next-line import/no-unresolved
 import { createInterface } from 'node:readline/promises';

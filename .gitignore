@@ -1,6 +1,6 @@
 # temp files and credentials!
 token.json
-credentials.json
+credentials*.json
 readonly-token.json
 write-token.json
 *token*
