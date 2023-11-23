@@ -12,7 +12,7 @@ const UPCOMING_DEPS_ONLY = true;
 
 // Load client secrets from a local file.
 const milestoneTypes = ['Deployment', 'Dependency Handover'];
-const interstedGroups = ['HR'];
+const interstedGroups = ['HR', 'FUL'];
 const milestones = [
     'AWS Env - CFC OTP',
     'Start - HR/RR',
@@ -74,7 +74,6 @@ const getKeyDatesPromise = async () => {
 
     const filterByUpcoming = ({ filteredByMilestone, colHeadings }) => {
         const dateIndex = colHeadings.indexOf('Date');
-        console.log(`Filtering by upcoming only - col index: ${dateIndex}, dataRows count: ${filteredByMilestone.length}`);
 
         const deltaDate = (date, yDelta, mDelta, dDelta) => new Date(
             date.getFullYear() + yDelta,
@@ -85,6 +84,7 @@ const getKeyDatesPromise = async () => {
         const now = new Date();
         const monthAgo = deltaDate(now, 0, -1, 0);
         const nextYear = deltaDate(now, +1, 0, 0);
+        console.log(`Filtering by upcoming only - col index: ${dateIndex}, dataRows count: ${filteredByMilestone.length}, monthAgo: ${monthAgo}, nextYear: ${nextYear}`);
 
         const filteredByDate = filteredByMilestone.filter((event) => {
             // what if eventDate is blank!
@@ -150,7 +150,7 @@ const getKeyDatesPromise = async () => {
     try {
         const keyDates = await sheetsJs.getSheetsDataPromise({
             spreadsheetId: sheetsConfig.keyDatesSpreadsheet,
-            range: 'Key Dates - Sorted!A:K',
+            range: 'Key Dates - Sorted!A2:K100000',
         });
 
         const keyDatesFilteredByMilestoneType = filterKeyDatesByMilestoneType(keyDates);
