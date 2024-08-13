@@ -22,6 +22,8 @@ const milestones = [
     'End - AC, RR, OSPN WMS',
     'Start - ASRS, FUL, WMS',
     'End - ASRS, FUL, WMS',
+    'Start - Bot & Control Systems',
+    'End - Bot & Control Systems',
 ];// details for AWS Env item is 'Handover from Cloud Services to HR/RR'
 
 console.log('Key Dates sheetsConfig.keyDatesSpreadsheet', sheetsConfig.keyDatesSpreadsheet);

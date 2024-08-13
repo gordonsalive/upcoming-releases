@@ -7,33 +7,31 @@
 /*
  * This is apparently the latest version? https://developers.google.com/sheets/api/quickstart/nodejs 
  * this might come from https://cloud.google.com/nodejs/docs/reference/google-auth-library/latest 
- * needs a credential file, which can be downloaded from https://console.cloud.google.com/apis/credentials?project=alan-gordon-prototypes 
  */
 
 /*
  * This version doesn't use express.
  */
 
-import http from 'http';
-import url from 'url';
-import opn from 'open';
-import destroyer from 'server-destroy';
-import { google } from 'googleapis';
-import oauth2Client from './oauth2Client.js';
+const fs = require('fs').promises;
+const path = require('path');
+const process = require('process');
+const {authenticate} = require('@google-cloud/local-auth');
+const {google} = require('googleapis');
 
 const READONLY_SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 const WRITE_SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
-// // Create an oAuth2 client to authorize the API call
-// const oauth2Client = (() => {
-//     const keyfile = 'credentials.json';
-//     const keys = JSON.parse(fs.readFileSync(keyfile));
-//     return new google.auth.OAuth2(
-//         keys.web.client_id,
-//         keys.web.client_secret,
-//         keys.web.redirect_uris[0]
-//     );
-// })();
+// Create an oAuth2 client to authorize the API call
+const oauth2Client = (() => {
+    const keyfile = 'credentials.json';
+    const keys = JSON.parse(fs.readFileSync(keyfile));
+    return new google.auth.OAuth2(
+        keys.web.client_id,
+        keys.web.client_secret,
+        keys.web.redirect_uris[0]
+    );
+})();
 
 /**
  * This is one of the many ways you can configure googleapis to use authentication credentials.

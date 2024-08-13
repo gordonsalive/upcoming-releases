@@ -5,7 +5,6 @@
   "private": true,
   "dependencies": {
     "googleapis": "^108.0.0",
-    "express": "^4.17.1",
     "server-destroy": "^1.0.1",
     "open": "^8.0.0",
     "chai": "^4.3.6"
@@ -17,7 +16,7 @@
   },
   "type": "module",
   "scripts": {
-    "start": "/Users/alan.gordon1/.nvm/versions/node/v17.4.0/bin/node ./update-upcoming-installs.js"
+    "start": "/Users/alan.gordon1/.nvm/versions/node/v20.14.0/bin/node ./update-upcoming-installs.js"
   },
   "license": "Apache-2.0"
 }

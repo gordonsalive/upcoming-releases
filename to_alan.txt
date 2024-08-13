@@ -1,0 +1,1 @@
+When setting up a new repo always change the eml and uname: git config user.name "Alan Gordon"   and   git config user.email "flash_git@gordons-alive.com"
