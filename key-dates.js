@@ -12,7 +12,7 @@ const UPCOMING_DEPS_ONLY = true;
 
 // Load client secrets from a local file.
 const milestoneTypes = ['Deployment', 'Dependency Handover'];
-const interstedGroups = ['HR', 'FUL'];
+const interstedGroups = ['HR', 'FUL', 'Fulfilment (Control Systems apps)'];
 const milestones = [
     'AWS Env - CFC OTP',
     'Start - HR/RR',
@@ -24,6 +24,8 @@ const milestones = [
     'End - ASRS, FUL, WMS',
     'Start - Bot & Control Systems',
     'End - Bot & Control Systems',
+    'Start - BAP & Control Systems',
+    'End - BAP & Control Systems'
 ];// details for AWS Env item is 'Handover from Cloud Services to HR/RR'
 
 console.log('Key Dates sheetsConfig.keyDatesSpreadsheet', sheetsConfig.keyDatesSpreadsheet);
@@ -48,6 +50,7 @@ const getKeyDatesPromise = async () => {
         const filteredByInterestedGroups = filteredByMilestoneType.filter((row) => {
             // convert interested group list for this row into array
             const rowInterestedGroups = row[interestedGroupsIndex]?.split(',').map((item) => item.trim());
+            console.log(`rowInterestedGroups: ${rowInterestedGroups}, ${rowInterestedGroups?.length}`);
             // find intersection
             const intersectingGroups = rowInterestedGroups?.filter(
                 (group) => interstedGroups.includes(group)
