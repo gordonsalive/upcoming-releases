@@ -7,7 +7,7 @@
     "googleapis": "^108.0.0",
     "server-destroy": "^1.0.1",
     "open": "^8.0.0",
-    "chai": "^4.3.6"
+    "chai": "^6.0.0"
   },
   "devDependencies": {
     "eslint": "^8.8.0",
