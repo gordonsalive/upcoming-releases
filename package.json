@@ -4,7 +4,7 @@
   "description": "A simple Node.js command-line application that makes requests to the Google Sheets API - from https://github.com/googleworkspace/node-samples/blob/master/sheets/quickstart",
   "private": true,
   "dependencies": {
-    "googleapis": "^108.0.0",
+    "googleapis": "^169.0.0",
     "server-destroy": "^1.0.1",
     "open": "^8.0.0",
     "chai": "^4.3.6"
